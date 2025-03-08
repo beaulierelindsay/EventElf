@@ -6,7 +6,7 @@ import os.path
 import pickle
 
 # If modifying these SCOPES, delete the file token.pickle.
-SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 def main():
     """Shows basic usage of the Google Calendar API.
@@ -45,9 +45,12 @@ def main():
 
     if not events:
         print('No upcoming events found.')
+        return
     for event in events:
         start = event['start'].get('dateTime', event['start'].get('date'))
-        print(start, event['summary'])
+        end = event['end'].get('dateTime', event['end'].get('date'))
+        updated = event['updated']
+        print('start: ' + start, 'end: ' + end, 'updated: ' + updated, event['summary'])
 
 if __name__ == '__main__':
     main()
