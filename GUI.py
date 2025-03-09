@@ -3,6 +3,8 @@ from tkinter import scrolledtext, messagebox, font
 from PIL import Image, ImageTk, ImageDraw
 import ai_model
 from main import create_event
+import os
+import sys
 
 class ModernChatUI:
     def __init__(self, master):
@@ -10,15 +12,15 @@ class ModernChatUI:
         master.title("EventElf Chat")
         master.geometry("400x650")  # More phone-like dimensions
         
-        # Color scheme inspired by the images
+        # Color scheme with sage green background
         self.colors = {
-            "bg": "#f5f7fa",           # Light background
-            "user_bubble": "#007bff",   # Blue for user messages
+            "bg": "#d4e0d0",           # Sage green background
+            "user_bubble": "#5a8262",   # Darker sage for user messages
             "bot_bubble": "#f1f3f6",    # Light gray for bot messages
             "user_text": "#ffffff",     # White text for user messages
             "bot_text": "#212529",      # Dark text for bot messages
             "input_bg": "#ffffff",      # White input background
-            "accent": "#007bff"         # Accent color for buttons
+            "accent": "#5a8262"         # Accent color for buttons
         }
         
         master.configure(bg=self.colors["bg"])
@@ -34,19 +36,43 @@ class ModernChatUI:
         self.stars_image = None
         self.send_icon = None
         
+        # Get the directory of the script
+        if getattr(sys, 'frozen', False):
+            # If the application is run as a bundle
+            script_dir = os.path.dirname(sys.executable)
+        else:
+            # If run as a script
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            
+        # Print current working directory for debugging
+        print("Current working directory:", os.getcwd())
+        print("Script directory:", script_dir)
+        
+        # Check if image files exist
+        elf_path = os.path.join(script_dir, "elf.png")
+        stars_path = os.path.join(script_dir, "stars.png")
+        
+        print(f"Looking for elf.png at: {elf_path}")
+        print(f"File exists: {os.path.exists(elf_path)}")
+        
         # Try to load images
         try:
-            # Create a circular elf avatar
-            self.elf_image = self.create_circular_avatar("elf.png", size=32)
-            
+            # If elf.png exists, use it, otherwise create default
+            if os.path.exists(elf_path):
+                self.elf_image = self.create_circular_avatar(elf_path, size=32)
+            else:
+                self.elf_image = self.create_default_avatar(size=32)
+                
             # Create a send button icon (right-facing arrow)
             self.send_icon = self.create_send_icon()
             
-            # You can still try to load other images
-            self.stars_image = ImageTk.PhotoImage(Image.open("stars.png").resize((120, 36)))
+            # Try to load stars image if it exists
+            if os.path.exists(stars_path):
+                self.stars_image = ImageTk.PhotoImage(Image.open(stars_path).resize((120, 36)))
         except Exception as e:
             print(f"Image loading error: {e}")
-            # Continue without images
+            self.elf_image = self.create_default_avatar(size=32)
+            # Continue without other images
 
         # Header frame
         self.header_frame = tk.Frame(master, bg="#ffffff", height=60)
@@ -63,7 +89,7 @@ class ModernChatUI:
             text="EventElf", 
             font=self.header_font, 
             bg="#ffffff", 
-            fg="#212529"
+            fg="#5a8262"  # Match the accent color
         )
         self.title_label.pack(side=tk.LEFT, padx=5)
         
@@ -105,6 +131,9 @@ class ModernChatUI:
         # Create a rounded frame for the input field
         self.input_frame = tk.Frame(self.input_area, bg="#f1f3f6", bd=0)
         self.input_frame.pack(fill=tk.X, expand=True, padx=10, pady=10)
+        
+        # Make the input frame appear rounded by adding corners
+        self.round_input_frame()
 
         # Entry widget for typing messages
         self.message_entry = tk.Entry(
@@ -113,7 +142,7 @@ class ModernChatUI:
             bd=0,
             bg="#f1f3f6",
             fg="#212529",
-            insertbackground="#212529"  # Cursor color
+            insertbackground="#5a8262"  # Cursor color matching theme
         )
         self.message_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(15, 5), pady=8)
         self.message_entry.bind("<Return>", self.send_message)
@@ -152,6 +181,30 @@ class ModernChatUI:
         # Welcome message
         self.master.after(500, lambda: self.append_message("EventElf", "Hello! I can help you create calendar events. What event would you like to schedule?"))
 
+    def create_default_avatar(self, size=40):
+        """Create a default avatar when image files are missing"""
+        try:
+            img = Image.new('RGBA', (size, size), self.colors["accent"])
+            draw = ImageDraw.Draw(img)
+            
+            # Add a text "EE" for EventElf in the center
+            font_size = size // 2
+            draw.text((size//2, size//2), "EE", fill="white", anchor="mm")
+            
+            # Create a mask for circular cropping
+            mask = Image.new('L', (size, size), 0)
+            mask_draw = ImageDraw.Draw(mask)
+            mask_draw.ellipse((0, 0, size, size), fill=255)
+            
+            # Apply the mask to make it circular
+            result = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+            result.paste(img, (0, 0), mask)
+            
+            return ImageTk.PhotoImage(result)
+        except Exception as e:
+            print(f"Default avatar creation error: {e}")
+            return None
+    
     def create_circular_avatar(self, image_path, size=40):
         """Create a circular avatar image"""
         try:
@@ -171,7 +224,8 @@ class ModernChatUI:
             return ImageTk.PhotoImage(result)
         except Exception as e:
             print(f"Avatar creation error: {e}")
-            return None
+            # Create a default avatar instead
+            return self.create_default_avatar(size)
 
     def create_send_icon(self, size=20):
         """Create a send button icon"""
@@ -207,57 +261,137 @@ class ModernChatUI:
         self.chat_feed.configure(scrollregion=self.chat_feed.bbox("all"))
         self.chat_feed.yview_moveto(1.0)  # Scroll to bottom
 
+    def create_round_bubble_image(self, width, height, color, radius=15):
+        """Create a round rectangle image for message bubbles"""
+        image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        
+        # Draw a rounded rectangle
+        draw.rounded_rectangle([(0, 0), (width, height)], radius, fill=color)
+        
+        return ImageTk.PhotoImage(image)
+    
     def create_message_bubble(self, sender, message, is_user=False):
-        """Create a message bubble in the chat feed"""
+        """Create a message bubble in the chat feed with rounder corners"""
         # Frame for this message
         message_frame = tk.Frame(self.messages_frame, bg=self.colors["bg"])
         message_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        # Calculate appropriate width based on message length
+        message_width = min(len(message) * 8 + 50, 220)  # Limit max width
+        message_height = (len(message) // 30 + 1) * 20 + 16  # Estimate height
         
         if is_user:
             # User message (right-aligned)
             spacer = tk.Frame(message_frame, bg=self.colors["bg"], width=40)
             spacer.pack(side=tk.LEFT, fill=tk.X, expand=True)
             
-            # Message bubble
-            bubble = tk.Label(
-                message_frame,
-                text=message,
-                bg=self.colors["user_bubble"],
-                fg=self.colors["user_text"],
-                font=self.message_font,
-                justify=tk.LEFT,
-                anchor="w",
-                padx=12,
-                pady=8,
-                wraplength=200
-            )
-            bubble.pack(side=tk.RIGHT)
-            
-            # Round the corners (using border radius)
-            bubble.configure(relief="raised", bd=0)
+            # Create rounded bubble background
+            try:
+                bubble_bg = self.create_round_bubble_image(
+                    message_width, 
+                    message_height, 
+                    self.colors["user_bubble"],
+                    radius=18  # More rounded corners
+                )
+                
+                # Container for bubble
+                bubble_container = tk.Label(
+                    message_frame,
+                    image=bubble_bg,
+                    bg=self.colors["bg"],
+                    bd=0
+                )
+                bubble_container.image = bubble_bg  # Keep reference
+                bubble_container.pack(side=tk.RIGHT)
+                
+                # Text over the bubble
+                bubble = tk.Label(
+                    bubble_container,
+                    text=message,
+                    bg=self.colors["user_bubble"],
+                    fg=self.colors["user_text"],
+                    font=self.message_font,
+                    justify=tk.LEFT,
+                    anchor="w",
+                    padx=12,
+                    pady=8,
+                    wraplength=message_width - 24
+                )
+                bubble.place(relx=0.5, rely=0.5, anchor="center")
+            except Exception as e:
+                # Fallback if image creation fails
+                print(f"Bubble creation error: {e}")
+                bubble = tk.Label(
+                    message_frame,
+                    text=message,
+                    bg=self.colors["user_bubble"],
+                    fg=self.colors["user_text"],
+                    font=self.message_font,
+                    justify=tk.LEFT,
+                    anchor="w",
+                    padx=12,
+                    pady=8,
+                    wraplength=200,
+                    bd=0
+                )
+                bubble.pack(side=tk.RIGHT)
         else:
             # Bot message (left-aligned with avatar)
             if self.elf_image:
                 avatar = tk.Label(message_frame, image=self.elf_image, bg=self.colors["bg"])
                 avatar.pack(side=tk.LEFT, padx=(0, 8))
             
-            # Message bubble
-            bubble = tk.Label(
-                message_frame,
-                text=message,
-                bg=self.colors["bot_bubble"],
-                fg=self.colors["bot_text"],
-                font=self.message_font,
-                justify=tk.LEFT,
-                anchor="w",
-                padx=12,
-                pady=8,
-                wraplength=200
-            )
-            bubble.pack(side=tk.LEFT)
-            
-            # Round the corners (using border radius)
-            bubble.configure(relief="raised", bd=0)
+            # Create rounded bubble background
+            try:
+                bubble_bg = self.create_round_bubble_image(
+                    message_width, 
+                    message_height, 
+                    self.colors["bot_bubble"],
+                    radius=18  # More rounded corners
+                )
+                
+                # Container for bubble
+                bubble_container = tk.Label(
+                    message_frame,
+                    image=bubble_bg,
+                    bg=self.colors["bg"],
+                    bd=0
+                )
+                bubble_container.image = bubble_bg  # Keep reference
+                bubble_container.pack(side=tk.LEFT)
+                
+                # Text over the bubble
+                bubble = tk.Label(
+                    bubble_container,
+                    text=message,
+                    bg=self.colors["bot_bubble"],
+                    fg=self.colors["bot_text"],
+                    font=self.message_font,
+                    justify=tk.LEFT,
+                    anchor="w",
+                    padx=12,
+                    pady=8,
+                    wraplength=message_width - 24
+                )
+                bubble.place(relx=0.5, rely=0.5, anchor="center")
+            except Exception as e:
+                # Fallback if image creation fails
+                print(f"Bubble creation error: {e}")
+                bubble = tk.Label(
+                    message_frame,
+                    text=message,
+                    bg=self.colors["bot_bubble"],
+                    fg=self.colors["bot_text"],
+                    font=self.message_font,
+                    justify=tk.LEFT,
+                    anchor="w",
+                    padx=12,
+                    pady=8,
+                    wraplength=200,
+                    bd=0
+                )
+                bubble.pack(side=tk.LEFT)
             
             # Add spacer to push the message to the left
             spacer = tk.Frame(message_frame, bg=self.colors["bg"], width=40)
@@ -323,6 +457,37 @@ class ModernChatUI:
         # Process the AI response after a short delay to simulate thinking
         self.master.after(100, lambda: self.process_ai_response(user_message, thinking_frame))
 
+    def round_input_frame(self):
+        """Apply rounded corners to the input frame"""
+        try:
+            # Get dimensions of the input frame
+            self.input_frame.update_idletasks()
+            width = self.input_frame.winfo_width()
+            height = self.input_frame.winfo_height()
+            
+            if width <= 1 or height <= 1:  # Not yet properly sized
+                self.master.after(100, self.round_input_frame)
+                return
+                
+            # Create rounded rectangle background
+            rounded_bg = self.create_round_bubble_image(
+                width, 
+                height, 
+                "#f1f3f6",
+                radius=20  # Very rounded corners
+            )
+            
+            # Apply the rounded background
+            bg_label = tk.Label(self.input_frame, image=rounded_bg, bg=self.colors["bg"])
+            bg_label.image = rounded_bg  # Keep reference
+            bg_label.place(x=0, y=0)
+            
+            # Bring entry and button to front
+            self.message_entry.lift()
+            self.send_button.lift()
+        except Exception as e:
+            print(f"Input frame rounding error: {e}")
+    
     def process_ai_response(self, user_message, thinking_frame):
         """Process user message and get AI response"""
         # Remove the "thinking" message frame
