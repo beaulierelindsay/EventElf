@@ -370,8 +370,6 @@ class ModernChatUI:
                     font=self.message_font,
                     justify=tk.LEFT,
                     anchor="w",
-                    padx=12,
-                    pady=8,
                     wraplength=message_width - 24
                 )
                 bubble.place(relx=0.5, rely=0.5, anchor="center")
