@@ -9,7 +9,7 @@ import pickle
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 def get_calendar_service():
-    """Authenticates and returns a Google Calendar service object"""
+    """Authenticates and returns a Google Calendar service object, or uses credentials from existing token.pickle file""" 
     creds = None
     if os.path.exists('token.pickle'):
         with open('token.pickle', 'rb') as token:
@@ -56,7 +56,6 @@ def create_event(event_params):
     return created_event
 
 def main():
-    """Main entry point for the application"""
     import GUI
     GUI.main()
 
