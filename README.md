@@ -2,12 +2,16 @@
 
 ## About
 
-EventElf was a project submitted to the [HackKnight 2025 hackathon](https://devpost.com/software/eventelf).
+EventElf was a project submitted to the [HackKnight 2025 hackathon](https://devpost.com/software/eventelf) (our first hackathon).
 Adding events to your Google Calendar is tedious and annoying. You have to find the correct month, select the correct date, write the title, and select a time. What EventElf does is speeds up this process. Watch the demo to see it in action!
 
 ## Demo
 
 [![Watch the demo](https://img.youtube.com/vi/93ZifA7hrtQ/0.jpg)](https://www.youtube.com/watch?v=93ZifA7hrtQ)
+
+## How it Works
+
+User types a message (ex: Schedule a team meeting tomorrow at 11am) and sends it. This message, along with today's date, gets sent to OpenAI API's gpt-4o-mini model for processing. Once processed, the program receives a structured output like {Title: "Team Meeting", Date: [tomorrow's date], Start Time: 11:00, End Time: 12:00, Reminder: 30} and prompts the user whether or not the information is correct. If it is, then the user can type "yes" and the structured outputs get sent as arguments to Google Calendar API, adding the event to the user's Google Calendar.
 
 ## 🧙‍♂️ Get Started
 
